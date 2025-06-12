@@ -81,7 +81,7 @@ open class HACSession : ObservableObject {
     //MARK: Login
     private var localToken: String = ""
     private var database: String = ""
-    private var passed: HACSessionStatus = .failed
+    private var sessionAvailability: HACSessionStatus = .failed
     
     private func requestSession() async -> HACSessionStatus {
         var request = URLRequest(url: URL(string: "https://\(url)/HomeAccess/Account/LogOn")!)
@@ -96,13 +96,8 @@ open class HACSession : ObservableObject {
         
         let params: [String: Any] = [
             "__RequestVerificationToken": localToken,
-            //"SCKTY00328510CustomEnabled": "False",
-            //"SCKTY00436568CustomEnabled": "False",
             "Database": "\(database)",
-            //"VerificationOption": "UsernamePassword",
             "LogOnDetails.UserName": username,
-            //"tempUN" : "",
-            //"tempPW" : "",
             "LogOnDetails.Password" : password
         ]
         request.httpBody = params.percentEncoded()
@@ -199,8 +194,8 @@ open class HACSession : ObservableObject {
         database = result.2
         
         if result.0 == .passed {
-            self.passed = await requestSession()
-            return self.passed
+            self.sessionAvailability = await requestSession()
+            return .passed
         }
         else {
             return result.0
@@ -217,7 +212,7 @@ open class HACSession : ObservableObject {
     //Returns empty array if login failed
     //Returns (status, current marking period, all marking periods)
     public func availableMarkingPeriods() async -> (HACSessionStatus, String, [String], [String: String]) {
-        if self.passed == .passed {
+        if self.sessionAvailability == .passed {
             return await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
                 var request = URLRequest(url: url)
@@ -338,7 +333,7 @@ open class HACSession : ObservableObject {
     //Requires a value from availableMarkingPeriods()
     //Returns (status, marking period)
     public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus, MarkingPeriod) {
-        if self.passed == .passed{
+        if self.sessionAvailability == .passed {
             return await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
                 var request = URLRequest(url: url)
