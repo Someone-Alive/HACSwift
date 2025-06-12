@@ -10,12 +10,12 @@ open class HACSession : ObservableObject {
     
     //MARK: Status
     ///The status indicator for login()
-    public enum HACSessionStatus {
+    public enum HACSessionStatus: Sendable {
         case failed, passed
     }
     
     //MARK: Marking Period related structs
-    public struct Assignment: Identifiable, Hashable, Codable {
+    public struct Assignment: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
         var dateDue: String
         var dateAssigned: String
@@ -30,7 +30,7 @@ open class HACSession : ObservableObject {
         var custom: Bool = false
     }
 
-    public struct Class: Identifiable, Hashable, Codable {
+    public struct Class: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
         var name: String
         var score: String
@@ -40,7 +40,7 @@ open class HACSession : ObservableObject {
         var categories: [String : [String : String]] // [Category : Weight]
     }
 
-    public struct MarkingPeriod: Identifiable, Hashable, Codable {
+    public struct MarkingPeriod: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
         var period: String
         var classes: [Class]
