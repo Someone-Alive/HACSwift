@@ -1,4 +1,4 @@
 # HAC-Swift
 
-A Swift class for interacting with Home Access Center (HAC). This class is not affiliated with PowerSchool in anyway. 
+A Swift package for interacting with Home Access Center (HAC). This package is not affiliated with PowerSchool in anyway. 
 
