@@ -46,6 +46,31 @@ open class HACSession : ObservableObject {
         var classes: [Class]
     }
     
+    public struct MarkingPeriodInfo: Sendable {
+        public let status: HACSessionStatus
+        public let currentPeriod: String
+        public let allPeriods: [String]
+        public let parameters: [String: String]
+        
+        public init(status: HACSessionStatus, currentPeriod: String, allPeriods: [String], parameters: [String: String]) {
+            self.status = status
+            self.currentPeriod = currentPeriod
+            self.allPeriods = allPeriods
+            self.parameters = parameters
+        }
+    }
+    
+    // MARK: New Sendable struct for requestGrades return type
+    public struct GradeRequestResult: Sendable {
+        public let status: HACSessionStatus
+        public let markingPeriod: MarkingPeriod
+        
+        public init(status: HACSessionStatus, markingPeriod: MarkingPeriod) {
+            self.status = status
+            self.markingPeriod = markingPeriod
+        }
+    }
+    
     //MARK: Variables
     private let username: String
     private let password: String
@@ -216,7 +241,7 @@ open class HACSession : ObservableObject {
     
     //Returns empty array if login failed
     //Returns (status, current marking period, all marking periods)
-    public func availableMarkingPeriods() async -> (HACSessionStatus, String, [String], [String: String]) {
+    public func availableMarkingPeriods() async -> MarkingPeriodInfo {
         if self.passed == .passed {
             return await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
@@ -227,7 +252,7 @@ open class HACSession : ObservableObject {
                 URLSession.shared.dataTask(with: request) {(data, res, err) in
                     guard let data = data else {
                         print("no data was returned: availableMarkingPeriods()")
-                        continuation.resume(returning: (.failed, "", [], [:]))
+                        continuation.resume(returning: MarkingPeriodInfo(status: .failed, currentPeriod: "", allPeriods: [], parameters: [:]))
                         return
                     }
                     
@@ -311,16 +336,16 @@ open class HACSession : ObservableObject {
                             }
                             else {
                                 print("Marking period was empty, try logging in first using: login()")
-                                continuation.resume(returning: (.failed, "", [], [:]))
+                                continuation.resume(returning: MarkingPeriodInfo(status: .failed, currentPeriod: "", allPeriods: [], parameters: [:]))
                                 return
                             }
                             
-                            continuation.resume(returning: (.passed, currentMarkingPeriod, allMarkingAPeriodOptions, paramDictionaryToReturn))
+                            continuation.resume(returning: MarkingPeriodInfo(status: .passed, currentPeriod: currentMarkingPeriod, allPeriods: allMarkingAPeriodOptions, parameters: paramDictionaryToReturn))
                             return
                             
                         } catch {
                             print("Could not get availableMarkingPeriods: \(error)")
-                            continuation.resume(returning: (.failed, "", [], [:]))
+                            continuation.resume(returning: MarkingPeriodInfo(status: .failed, currentPeriod: "", allPeriods: [], parameters: [:]))
                             return
                         }
                     }
@@ -329,7 +354,7 @@ open class HACSession : ObservableObject {
         }
         else {
             print("Login was not passed, therefore will not run availableMarkingPeriods()")
-            return (.failed, "", [], [:])
+            return MarkingPeriodInfo(status: .failed, currentPeriod: "", allPeriods: [], parameters: [:])
         }
     }
     
