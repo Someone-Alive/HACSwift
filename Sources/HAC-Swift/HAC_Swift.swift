@@ -4,7 +4,7 @@
 import Foundation
 import SwiftSoup
 
-class HACSession : ObservableObject {
+public class HACSession : ObservableObject {
     
     @Published public private(set) var markingPeriods: [MarkingPeriod] = []
     
@@ -16,7 +16,7 @@ class HACSession : ObservableObject {
     
     //MARK: Marking Period related structs
     public struct Assignment: Identifiable, Hashable, Codable {
-        var id = UUID()
+        public var id = UUID()
         var dateDue: String
         var dateAssigned: String
         var name: String
