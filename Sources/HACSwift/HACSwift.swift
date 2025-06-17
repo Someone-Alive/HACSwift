@@ -332,9 +332,9 @@ open class HACSession : ObservableObject {
     
     //Requires a value from availableMarkingPeriods()
     //Returns (status, marking period)
-    public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus, MarkingPeriod) {
+    public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus) {
         if self.sessionAvailability == .passed {
-            return await withCheckedContinuation { continuation in
+            let result: (HACSessionStatus, MarkingPeriod) =  await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
                 var request = URLRequest(url: url)
 
@@ -510,7 +510,7 @@ open class HACSession : ObservableObject {
                                 }
                             }
                             
-                            continuation.resume(returning: (.passed, MarkingPeriod(period: "", classes: [])))
+                            continuation.resume(returning: (.passed, MarkingPeriod(period: forPeriod, classes: markingPeriodClasses)))
                             return
                             
                         } catch {
@@ -523,10 +523,18 @@ open class HACSession : ObservableObject {
                 
                 task.resume()
             }
+            if result.0 == .passed {
+                markingPeriods.append(result.1)
+                return (result.0)
+            }
+            else {
+                print("Could not requestGrades for \(forPeriod)")
+                return (.failed)
+            }
         }
         else {
             print("Login was not passed, therefore will not run requestGrades()")
-            return (.failed, MarkingPeriod(period: "", classes: []))
+            return (.failed)
         }
     }
 }
