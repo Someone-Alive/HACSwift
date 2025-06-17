@@ -2,6 +2,7 @@
 // https://docs.swift.org/swift-book
 
 import Foundation
+import SwiftUI
 import SwiftSoup
 
 open class HACSession : ObservableObject {
@@ -28,6 +29,21 @@ open class HACSession : ObservableObject {
         public var weightedTotalPoints: String
         public var strikeThrough: Bool = false
         public var custom: Bool = false
+        
+        public init(id: UUID = UUID(), dateDue: String, dateAssigned: String, name: String, category: String, score: String, totalPoints: String, weight: String, weightedScore: String, weightedTotalPoints: String, strikeThrough: Bool, custom: Bool) {
+            self.id = id
+            self.dateDue = dateDue
+            self.dateAssigned = dateAssigned
+            self.name = name
+            self.category = category
+            self.score = score
+            self.totalPoints = totalPoints
+            self.weight = weight
+            self.weightedScore = weightedScore
+            self.weightedTotalPoints = weightedTotalPoints
+            self.strikeThrough = strikeThrough
+            self.custom = custom
+        }
     }
 
     public struct Class: Identifiable, Hashable, Codable, Sendable {
@@ -38,12 +54,28 @@ open class HACSession : ObservableObject {
         public var credits: Double
         public var assignments: [Assignment]
         public var categories: [String : [String : String]] // [Category : Weight]
+        
+        public init(id: UUID = UUID(), name: String, score: String, weight: Double, credits: Double, assignments: [Assignment], categories: [String : [String : String]]) {
+            self.id = id
+            self.name = name
+            self.score = score
+            self.weight = weight
+            self.credits = credits
+            self.assignments = assignments
+            self.categories = categories
+        }
     }
 
     public struct MarkingPeriod: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
         public var period: String
         public var classes: [Class]
+        
+        public init(id: UUID = UUID(), period: String, classes: [Class]) {
+            self.id = id
+            self.period = period
+            self.classes = classes
+        }
     }
     
     //MARK: Variables
@@ -442,7 +474,9 @@ open class HACSession : ObservableObject {
                                                 totalPoints: totalPoints,
                                                 weight: weight,
                                                 weightedScore: weightedScore,
-                                                weightedTotalPoints: weightedTotalPoints
+                                                weightedTotalPoints: weightedTotalPoints,
+                                                strikeThrough: false,
+                                                custom: false
                                             ))
                                         }
                                         else {
@@ -456,7 +490,8 @@ open class HACSession : ObservableObject {
                                                 weight: weight,
                                                 weightedScore: weightedScore,
                                                 weightedTotalPoints: weightedTotalPoints,
-                                                strikeThrough: true
+                                                strikeThrough: true,
+                                                custom: false
                                             ))
                                         }
                                     }
@@ -525,7 +560,14 @@ open class HACSession : ObservableObject {
                 task.resume()
             }
             if result.0 == .passed {
-                markingPeriods.append(result.1)
+                if useAnimation {
+                    withAnimation(Animation.bouncy(duration: 0.3)) {
+                        markingPeriods.append(result.1)
+                    }
+                }
+                else {
+                    markingPeriods.append(result.1)
+                }
                 return (result.0)
             }
             else {
