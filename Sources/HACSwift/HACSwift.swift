@@ -337,6 +337,7 @@ open class HACSession : ObservableObject {
             let result: (HACSessionStatus, MarkingPeriod) =  await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
                 var request = URLRequest(url: url)
+                request.httpMethod = "POST"
 
                 request.timeoutInterval = timeoutInterval
                 
