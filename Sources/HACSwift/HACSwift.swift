@@ -17,33 +17,33 @@ open class HACSession : ObservableObject {
     //MARK: Marking Period related structs
     public struct Assignment: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
-        var dateDue: String
-        var dateAssigned: String
-        var name: String
-        var category: String
-        var score: String
-        var totalPoints: String
-        var weight: String
-        var weightedScore: String
-        var weightedTotalPoints: String
-        var strikeThrough: Bool = false
-        var custom: Bool = false
+        public var dateDue: String
+        public var dateAssigned: String
+        public var name: String
+        public var category: String
+        public var score: String
+        public var totalPoints: String
+        public var weight: String
+        public var weightedScore: String
+        public var weightedTotalPoints: String
+        public var strikeThrough: Bool = false
+        public var custom: Bool = false
     }
 
     public struct Class: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
-        var name: String
-        var score: String
-        var weight: Double
-        var credits: Double
-        var assignments: [Assignment]
-        var categories: [String : [String : String]] // [Category : Weight]
+        public var name: String
+        public var score: String
+        public var weight: Double
+        public var credits: Double
+        public var assignments: [Assignment]
+        public var categories: [String : [String : String]] // [Category : Weight]
     }
 
     public struct MarkingPeriod: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
-        var period: String
-        var classes: [Class]
+        public var period: String
+        public var classes: [Class]
     }
     
     //MARK: Variables
