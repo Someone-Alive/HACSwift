@@ -373,7 +373,9 @@ open class HACSession : ObservableObject {
 
                 request.timeoutInterval = timeoutInterval
                 
-                request.httpBody = dictionary.percentEncoded()
+                var newDictionary = dictionary
+                newDictionary["ctl00$plnMain$ddlReportCardRuns"] = forPeriod
+                request.httpBody = newDictionary.percentEncoded()
                 
                 let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
                     guard let data = data else {
