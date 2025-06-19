@@ -362,6 +362,298 @@ open class HACSession : ObservableObject {
         }
     }
     
+    public func availableMarkingPeriodsWithCurrentMarkingPeriod(districtWeightIdentifier: String) async -> (HACSessionStatus, String, [String], [String: String]) {
+        if self.sessionAvailability == .passed {
+            let result: (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) = await withCheckedContinuation { continuation in
+                let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
+                var request = URLRequest(url: url)
+
+                request.timeoutInterval = timeoutInterval
+                
+                let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
+                    guard let data = data else {
+                        print("no data was returned: availableMarkingPeriods()")
+                        continuation.resume(returning: (.failed, "", [], [:], nil))
+                        return
+                    }
+                    
+                    Task {
+                        do {
+                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let markingPeriod = try doc.getElementById("plnMain_ddlReportCardRuns")?.children().array()
+                            
+                            var currentMarkingPeriod = ""
+                            var allMarkingAPeriodOptions: [String] = []
+                            
+                            var paramDictionaryToReturn: [String: String] = [:]
+                            
+                            var markingPeriodClasses: [Class] = []
+                            
+                            if markingPeriod?.isEmpty == false {
+                                for i in 0..<(markingPeriod?.count ?? 0) {
+                                    allMarkingAPeriodOptions.append(try markingPeriod?[i].attr("value") ?? "")
+                                    if try markingPeriod?[i].attr("selected").isEmpty == false {
+                                        currentMarkingPeriod = try markingPeriod?[i].attr("value") ?? ""
+                                    }
+                                }
+                                
+                                paramDictionaryToReturn = [
+                                       "__EVENTTARGET": "ctl00$plnMain$btnRefreshView",
+                                       "__EVENTARGUMENT": "",
+                                       "__VIEWSTATE": try doc.getElementById("__VIEWSTATE")?.attr("value") ?? "",
+                                       "__VIEWSTATEGENERATOR": "B0093F3C",
+                                       "__EVENTVALIDATION": try doc.getElementById("__EVENTVALIDATION")?.attr("value") ?? "",
+                                       "ctl00$plnMain$hdnValidMHACLicense": "Y",
+                                       "ctl00$plnMain$hdnIsVisibleClsWrk": "N",
+                                       "ctl00$plnMain$hdnIsVisibleCrsAvg": "N",
+                                       "ctl00$plnMain$hdnJsAlert": "Averages cannot be displayed when Report Card Run is set to (All Runs).",
+                                       "ctl00$plnMain$hdnTitle": "Classwork",
+                                       "ctl00$plnMain$hdnLastUpdated": "Last Updated",
+                                       "ctl00$plnMain$hdnDroppedCourse": " This course was dropped as of ",
+                                       "ctl00$plnMain$hdnddlClasses": "(All Classes)",
+                                       "ctl00$plnMain$hdnddlCompetencies": "(All Classes)",
+                                       "ctl00$plnMain$hdnCompDateDue": "Date Due",
+                                       "ctl00$plnMain$hdnCompDateAssigned": "Date Assigned",
+                                       "ctl00$plnMain$hdnCompCourse": "Course",
+                                       "ctl00$plnMain$hdnCompAssignment": "Assignment",
+                                       "ctl00$plnMain$hdnCompAssignmentLabel": "Assignments Not Related to Any Competency",
+                                       "ctl00$plnMain$hdnCompNoAssignments": "No assignments found",
+                                       "ctl00$plnMain$hdnCompNoClasswork": "Classwork could not be found for this competency for the selected report card run.",
+                                       "ctl00$plnMain$hdnCompScore": "Score",
+                                       "ctl00$plnMain$hdnCompPoints": "Points",
+                                       "ctl00$plnMain$hdnddlReportCardRuns1": "(All Runs)",
+                                       "ctl00$plnMain$hdnddlReportCardRuns2": "(All Terms)",
+                                       "ctl00$plnMain$hdnbtnShowAverage": "Show All Averages",
+                                       "ctl00$plnMain$hdnShowAveragesToolTip": "Show all student's averages",
+                                       "ctl00$plnMain$hdnPrintClassworkToolTip": "Print all classwork",
+                                       "ctl00$plnMain$hdnPrintClasswork": "Print Classwork",
+                                       "ctl00$plnMain$hdnCollapseToolTip": "Collapse all courses",
+                                       "ctl00$plnMain$hdnCollapse": "Collapse All",
+                                       "ctl00$plnMain$hdnFullToolTip": "Switch courses to Full View",
+                                       "ctl00$plnMain$hdnViewFull": "Full View",
+                                       "ctl00$plnMain$hdnQuickToolTip": "Switch courses to Quick View",
+                                       "ctl00$plnMain$hdnViewQuick": "Quick View",
+                                       "ctl00$plnMain$hdnExpand": "Expand All",
+                                       "ctl00$plnMain$hdnExpandToolTip": "Expand all courses",
+                                       "ctl00$plnMain$hdnChildCompetencyMessage": "This competency is calculated as an average of the following competencies",
+                                       "ctl00$plnMain$hdnCompetencyScoreLabel": "Grade",
+                                       "ctl00$plnMain$hdnAverageDetailsDialogTitle": "Average Details",
+                                       "ctl00$plnMain$hdnAssignmentCompetency": "Assignment Competency",
+                                       "ctl00$plnMain$hdnAssignmentCourse": "Assignment Course",
+                                       "ctl00$plnMain$hdnTooltipTitle": "Title",
+                                       "ctl00$plnMain$hdnCategory": "Category",
+                                       "ctl00$plnMain$hdnDueDate": "Due Date",
+                                       "ctl00$plnMain$hdnMaxPoints": "Max Points",
+                                       "ctl00$plnMain$hdnCanBeDropped": "Can Be Dropped",
+                                       "ctl00$plnMain$hdnHasAttachments": "Has Attachments",
+                                       "ctl00$plnMain$hdnExtraCredit": "Extra Credit",
+                                       "ctl00$plnMain$hdnType": "Type",
+                                       "ctl00$plnMain$hdnAssignmentDataInfo": "Information could not be found for the assignment",
+                                       "ctl00$plnMain$rdoViewFor" : "rdoViewForCourse",
+                                       "ctl00$plnMain$ddlReportCardRuns": currentMarkingPeriod == "" ? "1-2025" : currentMarkingPeriod,
+                                       "ctl00$plnMain$ddlClasses": "ALL",
+                                       "ctl00$plnMain$ddlCompetencies": "ALL",
+                                       "ctl00$plnMain$ddlOrderBy": "Class"
+                                   ]
+                                
+                                let course_container = try doc.getElementsByClass("AssignmentClass")
+                                
+                                if course_container.isEmpty() {
+                                    print("could not get grades")
+                                    continuation.resume(returning: (.failed, "", [], [:], nil))
+                                    return
+                                }
+                                
+                                for (index, container) in course_container.enumerated() {
+                                    do {
+                                        print("entered container")
+                                        
+                                        //Class Name
+                                        var nameContainer = try container.getElementsByTag("a").first()?.text().split(separator: " ") ?? ["", "", "", "Error"]
+                                        nameContainer.removeSubrange(0...2)
+                                        let className = nameContainer.joined(separator: " ")
+                                        
+                                        //Class Grade
+                                        var classGrade = ""
+                                        let classGradeContainer = try container.getElementById("plnMain_rptAssigmnetsByCourse_lblHdrAverage_\(index)")?.text()
+                                        if ((classGradeContainer?.isEmpty) == nil) {
+                                            classGrade = "N/A"
+                                        }
+                                        else {
+                                            let splitGrade = classGradeContainer?.split(separator: " ")
+                                            let parsed = splitGrade?.last
+                                            classGrade = parsed?.replacingOccurrences(of: "%", with: "") ?? "N/A"
+                                        }
+                                        
+                                        //Class Assignments
+                                        var classAssignments: [Assignment] = []
+                                        
+                                        let assignmentsContainer = try container.getElementById("plnMain_rptAssigmnetsByCourse_dgCourseAssignments_\(index)")?.getElementsByClass("sg-asp-table-data-row").array() ?? []
+                                        
+                                        for assignment in assignmentsContainer {
+                                            let specificAssignment = try assignment.getElementsByTag("td").array()
+                                            print("specificAssignment: \(specificAssignment)")
+                                            
+                                            var dateDue = ""
+                                            var dateAssigned = ""
+                                            var name = ""
+                                            var category = ""
+                                            var score = ""
+                                            var totalPoints = ""
+                                            var weight = ""
+                                            var weightedScore = ""
+                                            var weightedTotalPoints = ""
+                                            
+                                            if specificAssignment.count > 8 {
+                                                dateDue = try specificAssignment[0].text()
+                                                dateAssigned = try specificAssignment[1].text()
+                                                name = try specificAssignment[2].getElementsByTag("a").text()
+                                                category = try specificAssignment[3].text()
+                                                score = try specificAssignment[4].text()
+                                                totalPoints = try specificAssignment[5].text()
+                                                weight = try specificAssignment[6].text()
+                                                weightedScore = try specificAssignment[7].text()
+                                                weightedTotalPoints = try specificAssignment[8].text()
+                                            }
+
+                                            if category == " " || category.isEmpty {
+                                                category = "N/A"
+                                            }
+                                            
+                                            if score == " " || score.isEmpty {
+                                                score = "N/A"
+                                            }
+                                            
+                                            if dateAssigned == "&nbsp" {
+                                                dateAssigned = "N/A"
+                                            }
+                                            
+                                            if dateDue == "&nbsp" {
+                                                dateDue = "N/A"
+                                            }
+                                            
+                                            if try specificAssignment[2].getElementsByTag("strike").isEmpty() {
+                                                classAssignments.append(Assignment(
+                                                    dateDue: dateDue,
+                                                    dateAssigned: dateAssigned,
+                                                    name: name,
+                                                    category: category,
+                                                    score: score,
+                                                    totalPoints: totalPoints,
+                                                    weight: weight,
+                                                    weightedScore: weightedScore,
+                                                    weightedTotalPoints: weightedTotalPoints,
+                                                    strikeThrough: false,
+                                                    custom: false
+                                                ))
+                                            }
+                                            else {
+                                                classAssignments.append(Assignment(
+                                                    dateDue: dateDue,
+                                                    dateAssigned: dateAssigned,
+                                                    name: name,
+                                                    category: category,
+                                                    score: score,
+                                                    totalPoints: totalPoints,
+                                                    weight: weight,
+                                                    weightedScore: weightedScore,
+                                                    weightedTotalPoints: weightedTotalPoints,
+                                                    strikeThrough: true,
+                                                    custom: false
+                                                ))
+                                            }
+                                        }
+                                        
+                                        //Class Category & Category Weights
+                                        var categoryWeights: [String : [String : String]] = [:]
+                                        
+                                        let categoriesContainer = try container.getElementById("plnMain_rptAssigmnetsByCourse_dgCourseCategories_\(index)")
+                                        let categories = try categoriesContainer?.getElementsByClass("sg-asp-table-data-row").array() ?? []
+                                        
+                                        for category in categories {
+                                            let specificCategory = try category.getElementsByTag("td").array()
+                                            categoryWeights[try specificCategory[0].text()] = [
+                                                "studentPoints" : try specificCategory[1].text(),
+                                                "maximumPoints" : try specificCategory[2].text(),
+                                                "categoryWeight" : try specificCategory[4].text()
+                                            ]
+                                        }
+                                        
+                                        print("categoryWeights: \(categoryWeights)")
+                                        
+                                        var showNoticeForMissingCategoryWeight = false
+                                        
+                                        for assignment in classAssignments {
+                                            if categoryWeights[assignment.category] == nil {
+                                                categoryWeights[assignment.category] = [
+                                                    "studentPoints" : "100",
+                                                    "maximumPoints" : "100",
+                                                    "categoryWeight" : "0",
+                                                    "missingCategoryWeight": "YES"
+                                                ]
+                                                showNoticeForMissingCategoryWeight = true
+                                            }
+                                        }
+                                        
+                                        if showNoticeForMissingCategoryWeight {
+                                            //Toast(message: ToasterAlert(alertSeverity: 1, message: "Unable to get assignment weights for \(className). Predictions occuring within the class will temporarily be disabled until HAC provides the required data."))
+                                            print("did not receive all category weights, however will not notify")
+                                        }
+                                        else {
+                                            print("all categories accounted for \(className)")
+                                        }
+                                        
+                                        let weight = await HACDistrictWeightManager.shared.weight(for: districtWeightIdentifier, className: className)
+                                        let credit = 0.5
+                                        
+                                        let tempClass = Class(name: className, score: classGrade, weight: weight, credits: credit, assignments: classAssignments, categories: categoryWeights)
+                                        markingPeriodClasses.append(tempClass)
+                                        
+                                    } catch {
+                                        print("Something went wrong: ac loop parsing")
+                                    }
+                                }
+                                
+                            }
+                            else {
+                                print("Marking period was empty, try logging in first using: login()")
+                                continuation.resume(returning: (.failed, "", [], [:], nil))
+                                return
+                            }
+                            
+                            continuation.resume(returning: (.passed, currentMarkingPeriod, allMarkingAPeriodOptions, paramDictionaryToReturn, MarkingPeriod(period: currentMarkingPeriod, classes: markingPeriodClasses)))
+                            return
+                            
+                        } catch {
+                            print("Could not get availableMarkingPeriods: \(error)")
+                            continuation.resume(returning: (.failed, "", [], [:], nil))
+                            return
+                        }
+                    }
+                }
+                
+                task.resume()
+            }
+            
+            if result.4 != nil {
+                if useAnimation {
+                    withAnimation(Animation.bouncy(duration: 0.3)) {
+                        markingPeriods.append(result.4 ?? MarkingPeriod(period: "Error", classes: []))
+                    }
+                }
+                else {
+                    markingPeriods.append(result.4 ?? MarkingPeriod(period: "Error", classes: []))
+                }
+            }
+            
+            return (result.0, result.1, result.2, result.3)
+        }
+        else {
+            print("Login was not passed, therefore will not run availableMarkingPeriods()")
+            return (.failed, "", [], [:])
+        }
+    }
+    
     //Requires a value from availableMarkingPeriods()
     //Returns (status, marking period)
     public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus) {
@@ -548,7 +840,9 @@ open class HACSession : ObservableObject {
                                 }
                             }
                             
-                            continuation.resume(returning: (.passed, MarkingPeriod(period: forPeriod, classes: markingPeriodClasses)))
+                            let returnableMarkingPeriod = MarkingPeriod(period: forPeriod, classes: markingPeriodClasses)
+                            
+                            continuation.resume(returning: (.passed, returnableMarkingPeriod))
                             return
                             
                         } catch {
