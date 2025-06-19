@@ -362,7 +362,7 @@ open class HACSession : ObservableObject {
         }
     }
     
-    public func availableMarkingPeriodsWithCurrentMarkingPeriod(districtWeightIdentifier: String) async -> (HACSessionStatus, String, [String], [String: String]) {
+    public func availableMarkingPeriodsWithCurrentMarkingPeriod(districtWeightIdentifier: String) async -> (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) {
         if self.sessionAvailability == .passed {
             let result: (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
@@ -646,11 +646,11 @@ open class HACSession : ObservableObject {
                 }
             }
             
-            return (result.0, result.1, result.2, result.3)
+            return (result.0, result.1, result.2, result.3, result.4)
         }
         else {
             print("Login was not passed, therefore will not run availableMarkingPeriods()")
-            return (.failed, "", [], [:])
+            return (.failed, "", [], [:], nil)
         }
     }
     
