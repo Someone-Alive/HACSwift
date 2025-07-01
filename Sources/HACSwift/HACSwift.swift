@@ -15,6 +15,29 @@ open class HACSession : ObservableObject {
         case failed, passed
     }
     
+    //MARK: User Related Struct
+    public struct HACStudent: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
+        public var studentID: String
+        public var studentName: String
+        public var studentBirthdate: String
+        public var studentCounselor: String
+        public var studentBuilding: String
+        public var studentGrade: String
+        public var studentLanguage: String
+        
+        public init(id: UUID = UUID(), studentID: String, studentName: String, studentBirthdate: String, studentCounselor: String, studentBuilding: String, studentGrade: String, studentLanguage: String) {
+            self.id = id
+            self.studentID = studentID
+            self.studentName = studentName
+            self.studentBirthdate = studentBirthdate
+            self.studentCounselor = studentCounselor
+            self.studentBuilding = studentBuilding
+            self.studentGrade = studentGrade
+            self.studentLanguage = studentLanguage
+        }
+    }
+    
     //MARK: Marking Period related structs
     public struct Assignment: Identifiable, Hashable, Codable, Sendable {
         public var id = UUID()
@@ -231,6 +254,70 @@ open class HACSession : ObservableObject {
         }
         else {
             return result.0
+        }
+    }
+    
+    
+    //MARK: USER INFO
+    ///Gets the information about a user provided through HAC
+    public func getUserInfo() async -> HACStudent? {
+        if self.sessionAvailability == .passed {
+            let result: HACStudent = await withCheckedContinuation { continuation in
+                let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Registration.aspx")!
+                var request = URLRequest(url: url)
+
+                request.timeoutInterval = timeoutInterval
+                
+                let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
+                    guard let data = data else {
+                        print("no data was returned: getUserInfo()")
+                        continuation.resume(returning: HACStudent(studentID: "", studentName: "", studentBirthdate: "", studentCounselor: "", studentBuilding: "", studentGrade: "", studentLanguage: ""))
+                        return
+                    }
+                    
+                    Task {
+                        do {
+                            //Name formatter
+                            func formatName(fullName: String) async -> String {
+                                let formatter = PersonNameComponentsFormatter()
+                                guard let components = formatter.personNameComponents(from: fullName) else {
+                                    return fullName // Return original if formatting fails
+                                }
+
+                                return formatter.string(from: components)
+                            }
+                            
+                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            
+                            let sID = try doc.getElementById("plnMain_lblRegStudentID")?.text() ?? "N/A"
+                            
+                            var sName = try doc.getElementById("plnMain_lblRegStudentName")?.text() ?? "N/A"
+                            sName = await formatName(fullName: sName)
+                            
+                            let sBirthdate = try doc.getElementById("plnMain_lblBirthDate")?.text() ?? "N/A"
+                            let sCounselor = try doc.getElementById("plnMain_lblCounselor")?.text() ?? "N/A"
+                            let sBuilding = try doc.getElementById("plnMain_lblBuildingName")?.text() ?? "N/A"
+                            let sGrade = try doc.getElementById("plnMain_lblGrade")?.text() ?? "N/A"
+                            let sLanguage = try doc.getElementById("plnMain_lblLanguage")?.text() ?? "N/A"
+                            
+                            continuation.resume(returning: HACStudent(studentID: sID, studentName: sName, studentBirthdate: sBirthdate, studentCounselor: sCounselor, studentBuilding: sBuilding, studentGrade: sGrade, studentLanguage: sLanguage))
+                            return
+                            
+                        } catch {
+                            print("error in getUserInfo: \(error.localizedDescription)")
+                            continuation.resume(returning: HACStudent(studentID: "", studentName: "", studentBirthdate: "", studentCounselor: "", studentBuilding: "", studentGrade: "", studentLanguage: ""))
+                            return
+                        }
+                    }
+                }
+                
+                task.resume()
+            }
+            
+            return result
+        }
+        else {
+            return nil
         }
     }
     
