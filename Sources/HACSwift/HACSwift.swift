@@ -8,9 +8,15 @@ import SwiftSoup
 open class HACSession : ObservableObject {
     
     @Published public private(set) var markingPeriods: [MarkingPeriod] = []
+    @Published public private(set) var status: HACSessionUserStatus = .loggedOut
     
     //MARK: Status
     ///The status indicator for login()
+    
+    public enum HACSessionUserStatus: Sendable {
+        case loggedIn, loggedOut
+    }
+    
     public enum HACSessionStatus: Sendable {
         case failed, passed
     }
@@ -250,6 +256,7 @@ open class HACSession : ObservableObject {
         
         if result.0 == .passed {
             self.sessionAvailability = await requestSession()
+            self.status = .loggedIn
             return .passed
         }
         else {
