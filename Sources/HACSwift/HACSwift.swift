@@ -256,8 +256,10 @@ open class HACSession : ObservableObject {
         
         if result.0 == .passed {
             self.sessionAvailability = await requestSession()
-            self.status = .loggedIn
-            return .passed
+            if self.sessionAvailability == .passed {
+                self.status = .loggedIn
+            }
+            return self.sessionAvailability
         }
         else {
             return result.0
