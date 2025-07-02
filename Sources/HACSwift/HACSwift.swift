@@ -171,10 +171,26 @@ open class HACSession : ObservableObject {
                     continuation.resume(returning: .failed)
                     return
                 }
-                if data == nil {
+                
+                guard let data = data else {
                     print("No data was returned from requestSession()")
                     continuation.resume(returning: .failed)
                     return
+                }
+                
+                do {
+                    let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                    
+                    if try doc.getElementsByTag("form").first()?.attr("action") == "/HomeAccess/Account/LogOn" {
+                        continuation.resume(returning: .failed)
+                        return
+                    }
+                    else {
+                        continuation.resume(returning: .passed)
+                        return
+                    }
+                } catch {
+                    print("unable to request session: \(error)")
                 }
                 
                 continuation.resume(returning: .passed)
