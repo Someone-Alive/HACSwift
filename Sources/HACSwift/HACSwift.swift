@@ -108,8 +108,8 @@ open class HACSession : ObservableObject {
     }
     
     //MARK: Schedule related structs
-    public struct Schedule: Identifiable {
-        public let id = UUID()
+    public struct Schedule: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
         public var building: String
         public var courseCode: String
         public var courseName: String
