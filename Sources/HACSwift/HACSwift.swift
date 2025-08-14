@@ -1034,9 +1034,9 @@ open class HACSession : ObservableObject {
                                 for s in scheduleClasses {
                                     let root = try s.getElementsByTag("td").array()
                                     
-                                    var verticallyFormattedPeriods = try root[2].text().replacingOccurrences(of: " ", with: "\n").replacingOccurrences(of: "-", with: "|")
+                                    let verticallyFormattedPeriods = try root[2].text().replacingOccurrences(of: " ", with: "\n").replacingOccurrences(of: "-", with: "|")
                                     //print("asdfghjkl: \(root)")
-                                    var tempSchedule = Schedule(
+                                    let tempSchedule = Schedule(
                                         building: try root[7].text(),
                                         courseCode: try root[0].text(),
                                         courseName: try root[1].text(),
@@ -1052,7 +1052,7 @@ open class HACSession : ObservableObject {
                                 }
                             }
                             else {
-                                var tempSchedule: Schedule = Schedule(building: "Failed/ Error", courseCode: "", courseName: "", days: "", markingPeriods: "", periods: "", room: "", status: "", teacher: "")
+                                let tempSchedule: Schedule = Schedule(building: "Failed/ Error", courseCode: "", courseName: "", days: "", markingPeriods: "", periods: "", room: "", status: "", teacher: "")
                                 
                                 scheduleHolder.append(tempSchedule)
                             }
@@ -1111,6 +1111,8 @@ open class HACSession : ObservableObject {
                         }
                     }
                 }
+                
+                task.resume()
             }
             if result.0 == .passed {
                 return (result.0, result.1, result.2, result.3)
