@@ -107,6 +107,20 @@ open class HACSession : ObservableObject {
         }
     }
     
+    //MARK: Schedule related structs
+    public struct Schedule: Identifiable {
+        public let id = UUID()
+        public var building: String
+        public var courseCode: String
+        public var courseName: String
+        public var days: String
+        public var markingPeriods: String
+        public var periods: String
+        public var room: String
+        public var status: String
+        public var teacher: String
+    }
+    
     //MARK: Variables
     private let username: String
     private let password: String
@@ -348,7 +362,7 @@ open class HACSession : ObservableObject {
     
     //MARK: MarkingPeriod
     ///Gets the grades of each marking period
-    ///Your should call this function first before anything.
+    ///You should call this function first before anything.
     ///
     ///Returns (HACSessionStatus)
     ///(HACSessionStatus) If successfully logged in, returns passed if not, returns failed
@@ -767,10 +781,10 @@ open class HACSession : ObservableObject {
     }
     
     //Requires a value from availableMarkingPeriods()
-    //Returns (status, marking period)
+    //Returns (status)
     public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus) {
         if self.sessionAvailability == .passed {
-            let result: (HACSessionStatus, MarkingPeriod) =  await withCheckedContinuation { continuation in
+            let result: (HACSessionStatus, MarkingPeriod) = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
@@ -934,8 +948,7 @@ open class HACSession : ObservableObject {
                                     }
                                     
                                     if showNoticeForMissingCategoryWeight {
-                                        //Toast(message: ToasterAlert(alertSeverity: 1, message: "Unable to get assignment weights for \(className). Predictions occuring within the class will temporarily be disabled until HAC provides the required data."))
-                                        print("did not receive all category weights, however will not notify")
+                                        print("did not receive all category weights")
                                     }
                                     else {
                                         print("all categories accounted for \(className)")
@@ -986,6 +999,129 @@ open class HACSession : ObservableObject {
         else {
             print("Login was not passed, therefore will not run requestGrades()")
             return (.failed)
+        }
+    }
+    
+    //MARK: Schedule
+    ///Gets the current student schedule displayed within HAC
+    
+    public func getStudentSchedule() async -> (HACSessionStatus, [Schedule], [String], [String]) {
+        if self.sessionAvailability == .passed {
+            let result: (HACSessionStatus, [Schedule], [String], [String]) = await withCheckedContinuation { continuation in
+                let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Classes.aspx")!
+                var request = URLRequest(url: url)
+
+                request.timeoutInterval = timeoutInterval
+                
+                let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
+                    guard let data = data else {
+                        print("no data was returned: getStudentSchedule()")
+                        continuation.resume(returning: (.failed, [], [], []))
+                        return
+                    }
+                    
+                    Task {
+                        do {
+                            
+                            var scheduleHolder: [Schedule] = []
+                            
+                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            
+                            let scheduleContainer = try doc.getElementById("plnMain_dgSchedule")
+                            
+                            if scheduleContainer != nil {
+                                let scheduleClasses = try scheduleContainer!.getElementsByClass("sg-asp-table-data-row").array()
+                                for s in scheduleClasses {
+                                    let root = try s.getElementsByTag("td").array()
+                                    
+                                    var verticallyFormattedPeriods = try root[2].text().replacingOccurrences(of: " ", with: "\n").replacingOccurrences(of: "-", with: "|")
+                                    //print("asdfghjkl: \(root)")
+                                    var tempSchedule = Schedule(
+                                        building: try root[7].text(),
+                                        courseCode: try root[0].text(),
+                                        courseName: try root[1].text(),
+                                        days: try root[5].text(),
+                                        markingPeriods: try root[6].text(),
+                                        periods: verticallyFormattedPeriods,
+                                        room: try root[4].text(),
+                                        status: try root[8].text(),
+                                        teacher: try root[3].text()
+                                    )
+                                    
+                                    scheduleHolder.append(tempSchedule)
+                                }
+                            }
+                            else {
+                                var tempSchedule: Schedule = Schedule(building: "Failed/ Error", courseCode: "", courseName: "", days: "", markingPeriods: "", periods: "", room: "", status: "", teacher: "")
+                                
+                                scheduleHolder.append(tempSchedule)
+                            }
+                            
+                            var tempUnique: [String] = []
+                            var notUnique = false
+                            
+                            let localSchedule = scheduleHolder
+                            for s in localSchedule {
+                                for unique in tempUnique {
+                                    if unique == s.markingPeriods {
+                                        notUnique = true
+                                    }
+                                }
+                                
+                                if notUnique {
+                                    notUnique = false
+                                    continue
+                                }
+                                else {
+                                    notUnique = false
+                                    tempUnique.append(s.markingPeriods)
+                                }
+                                
+                            }
+                            
+                            var tempUnique2: [String] = []
+                            var notUnique2 = false
+                            
+                            for s in localSchedule {
+                                for unique in tempUnique2 {
+                                    if unique == s.days {
+                                        notUnique2 = true
+                                    }
+                                }
+                                
+                                if notUnique2 {
+                                    notUnique2 = false
+                                    continue
+                                }
+                                else {
+                                    notUnique2 = false
+                                    tempUnique2.append(s.days)
+                                }
+                                
+                            }
+                            let finalSchedule = scheduleHolder
+                            
+                            continuation.resume(returning: (.passed, finalSchedule, tempUnique, tempUnique2))
+                            return
+                            
+                        } catch {
+                            print("Something went wrong in getSchedule")
+                            continuation.resume(returning: (.failed, [], [], []))
+                            return
+                        }
+                    }
+                }
+            }
+            if result.0 == .passed {
+                return (result.0, result.1, result.2, result.3)
+            }
+            else {
+                return (.failed, [], [], [])
+            }
+        }
+        else {
+            print("Login was not passed, therefore will not run getStudentSchedule()")
+            return (.failed, [], [], [])
         }
     }
 }
