@@ -1131,10 +1131,14 @@ open class HACSession : ObservableObject {
                 if useAnimation {
                     withAnimation(Animation.bouncy(duration: 0.3)) {
                         schedule = result.1
+                        scheduleUnique1 = result.2
+                        scheduleUnique2 = result.3
                     }
                 }
                 else {
                     schedule = result.1
+                    scheduleUnique1 = result.2
+                    scheduleUnique2 = result.3
                 }
                 return (result.0, result.1, result.2, result.3)
             }
