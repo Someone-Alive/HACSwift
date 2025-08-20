@@ -7,8 +7,17 @@ import SwiftSoup
 
 open class HACSession : ObservableObject {
     
-    @Published public private(set) var markingPeriods: [MarkingPeriod] = []
+    // Session Status
     @Published public private(set) var status: HACSessionUserStatus = .loggedOut
+    
+    //Marking Periods
+    @Published public private(set) var markingPeriods: [MarkingPeriod] = []
+    
+    //Schedule
+    @Published public private(set) var schedule: [HACSession.Schedule] = []
+    @Published public private(set) var scheduleUnique1: [String] = []
+    @Published public private(set) var scheduleUnique2: [String] = []
+    
     
     //MARK: Status
     ///The status indicator for login()
@@ -1007,6 +1016,10 @@ open class HACSession : ObservableObject {
     
     public func getStudentSchedule() async -> (HACSessionStatus, [Schedule], [String], [String]) {
         if self.sessionAvailability == .passed {
+            if schedule.isEmpty != true {
+                return (.passed, schedule, scheduleUnique1, scheduleUnique2)
+            }
+            
             let result: (HACSessionStatus, [Schedule], [String], [String]) = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Classes.aspx")!
                 var request = URLRequest(url: url)
@@ -1115,6 +1128,14 @@ open class HACSession : ObservableObject {
                 task.resume()
             }
             if result.0 == .passed {
+                if useAnimation {
+                    withAnimation(Animation.bouncy(duration: 0.3)) {
+                        schedule = result.1
+                    }
+                }
+                else {
+                    schedule = result.1
+                }
                 return (result.0, result.1, result.2, result.3)
             }
             else {
