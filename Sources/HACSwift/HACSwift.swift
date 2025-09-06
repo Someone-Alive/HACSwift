@@ -123,24 +123,24 @@ open class HACSession : ObservableObject {
     //MARK: Transcript related structs
     public struct TranscriptGPA: Identifiable {
         public let id = UUID()
-        var type: String
-        var points: String
-        var rank: String
+        public var type: String
+        public var points: String
+        public var rank: String
     }
 
     public struct TranscriptClass: Identifiable {
         public let id = UUID()
-        var data: [String: String]
+        public var data: [String: String]
     }
 
     public struct Transcript: Identifiable {
         public let id = UUID()
-        var year: String
-        var building: String
-        var grade: String
-        var columnTitles: [String.SubSequence]
-        var classes: [TranscriptClass]
-        var totalCredits: String
+        public var year: String
+        public var building: String
+        public var grade: String
+        public var columnTitles: [String.SubSequence]
+        public var classes: [TranscriptClass]
+        public var totalCredits: String
     }
     
     //MARK: Schedule related structs
