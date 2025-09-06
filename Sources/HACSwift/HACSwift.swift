@@ -13,6 +13,10 @@ open class HACSession : ObservableObject {
     //Marking Periods
     @Published public private(set) var markingPeriods: [MarkingPeriod] = []
     
+    //Transcript
+    @Published public private(set) var transcript: [Transcript] = []
+    @Published public private(set) var transcriptGPA: [TranscriptGPA] = []
+    
     //Schedule
     @Published public private(set) var schedule: [HACSession.Schedule] = []
     @Published public private(set) var scheduleUnique1: [String] = []
@@ -114,6 +118,29 @@ open class HACSession : ObservableObject {
             self.period = period
             self.classes = classes
         }
+    }
+    
+    //MARK: Transcript related structs
+    public struct TranscriptGPA: Identifiable {
+        public let id = UUID()
+        var type: String
+        var points: String
+        var rank: String
+    }
+
+    public struct TranscriptClass: Identifiable {
+        public let id = UUID()
+        var data: [String: String]
+    }
+
+    public struct Transcript: Identifiable {
+        public let id = UUID()
+        var year: String
+        var building: String
+        var grade: String
+        var columnTitles: [String.SubSequence]
+        var classes: [TranscriptClass]
+        var totalCredits: String
     }
     
     //MARK: Schedule related structs
@@ -1008,6 +1035,161 @@ open class HACSession : ObservableObject {
         else {
             print("Login was not passed, therefore will not run requestGrades()")
             return (.failed)
+        }
+    }
+    
+    //MARK: Transcript
+    ///Gets the current transcript available within HAC
+    
+    public func getStudentTranscript() async -> (HACSessionStatus, [Transcript], [TranscriptGPA]) {
+        if self.sessionAvailability == .passed {
+            if transcript.isEmpty != true {
+                return (.passed, transcript, transcriptGPA)
+            }
+            
+            let result: (HACSessionStatus, [Transcript], [TranscriptGPA]) = await withCheckedContinuation { continuation in
+                let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Transcript.aspx")!
+                var request = URLRequest(url: url)
+                
+                request.timeoutInterval = timeoutInterval
+                
+                let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
+                    guard let data = data else {
+                        continuation.resume(returning: (.passed, [], []))
+                        return
+                    }
+                    
+                    Task {
+                        do {
+                            var returnableTranscript: [Transcript] = []
+                            var returnableTranscriptGPA: [TranscriptGPA] = []
+                            
+                            var relativeIndex: Int = 0
+                            var relativeIndexGPA: Int = 1
+                            
+                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            
+                            let encompassingTable = try doc.getElementById("plnMain_rpTranscriptGroup_tblCumGPAInfo")
+                            
+                            if encompassingTable == nil || encompassingTable?.hasText() != true {
+                                continuation.resume(returning: (.passed, [], []))
+                                return
+                            }
+                            
+                            for child in encompassingTable!.children().first()!.children() {
+                                if child.id() == "" {
+                                    continue
+                                }
+                                else {
+                                    
+                                    returnableTranscriptGPA.append(TranscriptGPA(type: (try child.getElementById("plnMain_rpTranscriptGroup_lblGPADescr\(relativeIndexGPA)")?.text()) ?? " ", points: (try child.getElementById("plnMain_rpTranscriptGroup_lblGPACum\(relativeIndexGPA)")?.text()) ?? " ", rank: (try child.getElementById("plnMain_rpTranscriptGroup_tdGPARank\(relativeIndexGPA)")?.text()) ?? " "))
+                                    relativeIndexGPA += 1
+                                }
+                            }
+                            
+                            let transcriptGroup = try doc.getElementsByTag("td")
+                            for (_, transcript) in transcriptGroup.enumerated() {
+                                if transcript.hasClass("sg-transcript-group") {
+                                    let td_with_class = try transcript.getElementsByClass("sg-transcript-group")
+                                    let s1: Data? = try td_with_class.html().data(using: .utf8)
+                                    let parser_step1: Document = try SwiftSoup.parse(String(data: s1!, encoding: .utf8)!)
+                                    
+                                    let innerTables = try parser_step1.getElementsByTag("table")
+                                    
+                                    let headerTable = innerTables[0]
+                                    let coursesTable = innerTables[1]
+                                    
+                                    let s2: Data? = try headerTable.html().data(using: .utf8)
+                                    let parser_step2: Document = try SwiftSoup.parse(String(data: s2!, encoding: .utf8)!)
+                                    
+                                    let totalCredits = try parser_step1.getElementById("plnMain_rpTranscriptGroup_LblTCreditValue_\(relativeIndex)")?.text()
+                                    
+                                    let yearsAttended = try parser_step2.getElementById("plnMain_rpTranscriptGroup_lblYearValue_\(relativeIndex)")?.text()
+                                    let gradeLevel = try parser_step2.getElementById("plnMain_rpTranscriptGroup_lblGradeValue_\(relativeIndex)")?.text()
+                                    let building = try parser_step2.getElementById("plnMain_rpTranscriptGroup_lblBuildingValue_\(relativeIndex)")?.text()
+                                    
+                                    print(yearsAttended ?? "null")
+                                    print(gradeLevel ?? "null")
+                                    print(building ?? "null")
+                                    
+                                    let s3: Data? = "<html><body>\(coursesTable)</body></html>".data(using: .utf8)
+                                    let parser_step3: Document = try SwiftSoup.parse(String(data: s3!, encoding: .utf8)!)
+                                    let courseRows = try parser_step3.getElementsByClass("sg-asp-table-data-row")
+                                    
+                                    var tempClassHolder: [TranscriptClass] = []
+                                    
+                                    let headers = try parser_step1.getElementsByClass("sg-asp-table-header-row").text().split(separator: " ")
+                                    
+                                    for courseRow in courseRows {
+                                        if courseRow.hasClass("sg-asp-table-data-row") {
+                                            
+                                            let classDetail = courseRow.children()
+                                            
+                                            if classDetail.count == headers.count {
+                                                var classDetailData: [String: String] = [:]
+                                                for i in 0..<headers.count {
+                                                    classDetailData[String(headers[i])] = try classDetail[i].text()
+                                                }
+                                                
+                                                for detail in classDetailData {
+                                                    if detail.value == "" {
+                                                        classDetailData[detail.key] = " "
+                                                    }
+                                                }
+                                                
+                                                tempClassHolder.append(TranscriptClass(data: classDetailData))
+                                            }
+                                            else {
+                                                print("classDetail.count != headers.count")
+                                                continuation.resume(returning: (.passed, [], []))
+                                                return
+                                            }
+                                        }
+                                    }
+                                    
+                                    returnableTranscript.append(Transcript(year: yearsAttended ?? "", building: building ?? "", grade: gradeLevel ?? "", columnTitles: headers, classes: tempClassHolder, totalCredits: totalCredits ?? ""))
+                                    
+                                    relativeIndex += 1
+                                }
+                            }
+                            print("transcript is ready")
+                            
+                            let shouldReturnTranscript = returnableTranscript
+                            let shouldReturnTranscriptGPA = returnableTranscriptGPA
+                            continuation.resume(returning: (.passed, shouldReturnTranscript, shouldReturnTranscriptGPA))
+                            return
+                        } catch {
+                            print("Something went wrong in getOfficialTranscript")
+                            continuation.resume(returning: (.passed, [], []))
+                            return
+                        }
+                    }
+                }
+                
+                task.resume()
+            }
+            
+            if result.0 == .passed {
+                if useAnimation {
+                    withAnimation(Animation.bouncy(duration: 0.3)) {
+                        transcript = result.1
+                        transcriptGPA = result.2
+                    }
+                }
+                else {
+                    transcript = result.1
+                    transcriptGPA = result.2
+                }
+                
+                return (result.0, result.1, result.2)
+            }
+            else {
+                return (.failed, [], [])
+            }
+        }
+        else {
+            print("Login was not passed, therefore will not run getStudentTranscript()")
+            return (.failed, [], [])
         }
     }
     
