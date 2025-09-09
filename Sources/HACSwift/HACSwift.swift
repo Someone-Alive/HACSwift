@@ -121,24 +121,24 @@ open class HACSession : ObservableObject {
     }
     
     //MARK: Transcript related structs
-    public struct TranscriptGPA: Identifiable {
-        public let id = UUID()
+    public struct TranscriptGPA: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
         public var type: String
         public var points: String
         public var rank: String
     }
 
-    public struct TranscriptClass: Identifiable {
-        public let id = UUID()
+    public struct TranscriptClass: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
         public var data: [String: String]
     }
 
-    public struct Transcript: Identifiable {
-        public let id = UUID()
+    public struct Transcript: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
         public var year: String
         public var building: String
         public var grade: String
-        public var columnTitles: [String.SubSequence]
+        public var columnTitles: [String]
         public var classes: [TranscriptClass]
         public var totalCredits: String
     }
@@ -1118,7 +1118,7 @@ open class HACSession : ObservableObject {
                                     
                                     var tempClassHolder: [TranscriptClass] = []
                                     
-                                    let headers = try parser_step1.getElementsByClass("sg-asp-table-header-row").text().split(separator: " ")
+                                    let headers = try parser_step1.getElementsByClass("sg-asp-table-header-row").text().split(separator: " ").map(String.init)
                                     
                                     for courseRow in courseRows {
                                         if courseRow.hasClass("sg-asp-table-data-row") {
