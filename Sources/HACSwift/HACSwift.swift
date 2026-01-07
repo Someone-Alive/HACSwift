@@ -1333,6 +1333,10 @@ open class HACSession : ObservableObject {
             return (.failed, [], [], [])
         }
     }
+    
+    public func clearURLCache() async {
+        URLCache.shared.removeAllCachedResponses()
+    }
 }
 
 //MARK: Extensions
