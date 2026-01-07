@@ -1334,6 +1334,24 @@ open class HACSession : ObservableObject {
         }
     }
     
+    public func logout() async {        
+        var request = URLRequest(url: URL(string: "https://\(self.url)/HomeAccess/Account/Logoff")!)
+        request.timeoutInterval = self.timeoutInterval
+        
+        //Status, localToken, database
+        let task = URLSession.shared.dataTask(with: request) {(data, response, error) in
+            if error != nil {
+                return
+            }
+            
+            guard data != nil else {
+                return
+            }
+            print("HAC User has been logged out")
+        }
+        task.resume()
+    }
+    
     public func clearURLCache() async {
         URLCache.shared.removeAllCachedResponses()
     }
