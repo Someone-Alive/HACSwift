@@ -1334,7 +1334,7 @@ open class HACSession : ObservableObject {
         }
     }
     
-    public func logout() async {        
+    public func logout() {        
         var request = URLRequest(url: URL(string: "https://\(self.url)/HomeAccess/Account/Logoff")!)
         request.timeoutInterval = self.timeoutInterval
         
