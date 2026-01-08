@@ -5,10 +5,12 @@ import Foundation
 import SwiftUI
 import SwiftSoup
 
-open class HACSession : ObservableObject {
-    
+class HACSwiftInformation {
     //General Information
-    public let version = "0.0.27"
+    public let version = "0.0.28"
+}
+
+open class HACSession : ObservableObject {
     
     // Session Status
     @Published public private(set) var status: HACSessionUserStatus = .loggedOut
