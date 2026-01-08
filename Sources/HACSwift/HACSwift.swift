@@ -7,6 +7,9 @@ import SwiftSoup
 
 open class HACSession : ObservableObject {
     
+    //General Information
+    public let version = "0.0.27"
+    
     // Session Status
     @Published public private(set) var status: HACSessionUserStatus = .loggedOut
     
@@ -167,9 +170,6 @@ open class HACSession : ObservableObject {
     private let hacName: String
     
     private let timeoutInterval: Double
-    
-    //API Version
-    private let version: String = "1.0.0"
     
     //MARK: Initializers
     ///Username: takes in a string representation of the username
