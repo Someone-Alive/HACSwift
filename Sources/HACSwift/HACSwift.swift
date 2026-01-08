@@ -5,11 +5,6 @@ import Foundation
 import SwiftUI
 import SwiftSoup
 
-class HACSwiftInformation {
-    //General Information
-    public let version = "0.0.28"
-}
-
 open class HACSession : ObservableObject {
     
     // Session Status
