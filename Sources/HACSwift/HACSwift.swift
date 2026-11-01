@@ -5,6 +5,7 @@ import Foundation
 import SwiftUI
 import SwiftSoup
 
+@MainActor
 open class HACSession : ObservableObject {
     
     // Session Status
@@ -21,6 +22,9 @@ open class HACSession : ObservableObject {
     @Published public private(set) var schedule: [HACSession.Schedule] = []
     @Published public private(set) var scheduleUnique1: [String] = []
     @Published public private(set) var scheduleUnique2: [String] = []
+    
+    //IPR
+    @Published public private(set) var ipr: [IPR] = []
     
     
     //MARK: Status
@@ -157,6 +161,25 @@ open class HACSession : ObservableObject {
         public var teacher: String
     }
     
+    //MARK: IPR related structs
+    public struct IPR: Identifiable {
+        public let id = UUID()
+        var title: String
+        var columns: [String]
+        var rows: [[String]]
+        var iprDates: [String]
+        var comment: String
+    }
+
+    public struct ReportCard: Identifiable {
+        public let id = UUID()
+        var title: String
+        var columns: [String]
+        var rows: [[String]]
+        var totalEarnedCredit: String
+        var comment: String
+    }
+    
     //MARK: Variables
     private let username: String
     private let password: String
@@ -226,7 +249,7 @@ open class HACSession : ObservableObject {
                 }
                 
                 do {
-                    let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                    let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                     
                     if try doc.getElementsByTag("form").first()?.attr("action") == "/HomeAccess/Account/LogOn" {
                         continuation.resume(returning: .failed)
@@ -273,7 +296,7 @@ open class HACSession : ObservableObject {
                     return
                 }
                 do {
-                    let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                    let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                     
                     let localToken = try doc.getElementsByTag("input").attr("name", "__RequestVerificationToken").attr("value")
                     
@@ -359,7 +382,7 @@ open class HACSession : ObservableObject {
                                 return formatter.string(from: components)
                             }
                             
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             
                             let sID = try doc.getElementById("plnMain_lblRegStudentID")?.text() ?? "N/A"
                             
@@ -419,7 +442,7 @@ open class HACSession : ObservableObject {
                     
                     Task {
                         do {
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             let markingPeriod = try doc.getElementById("plnMain_ddlReportCardRuns")?.children().array()
                             
                             var currentMarkingPeriod = ""
@@ -488,7 +511,7 @@ open class HACSession : ObservableObject {
                                        "ctl00$plnMain$hdnType": "Type",
                                        "ctl00$plnMain$hdnAssignmentDataInfo": "Information could not be found for the assignment",
                                        "ctl00$plnMain$rdoViewFor" : "rdoViewForCourse",
-                                       "ctl00$plnMain$ddlReportCardRuns": currentMarkingPeriod == "" ? "1-2025" : currentMarkingPeriod,
+                                       "ctl00$plnMain$ddlReportCardRuns": currentMarkingPeriod == "" ? "1-2026" : currentMarkingPeriod,
                                        "ctl00$plnMain$ddlClasses": "ALL",
                                        "ctl00$plnMain$ddlCompetencies": "ALL",
                                        "ctl00$plnMain$ddlOrderBy": "Class"
@@ -538,7 +561,7 @@ open class HACSession : ObservableObject {
                     
                     Task {
                         do {
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             let markingPeriod = try doc.getElementById("plnMain_ddlReportCardRuns")?.children().array()
                             
                             var currentMarkingPeriod = ""
@@ -837,7 +860,7 @@ open class HACSession : ObservableObject {
                     
                     Task {
                         do {
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             
                             let course_container = try doc.getElementsByClass("AssignmentClass")
                             
@@ -1064,7 +1087,7 @@ open class HACSession : ObservableObject {
                             var relativeIndex: Int = 0
                             var relativeIndexGPA: Int = 1
                             
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             
                             let encompassingTable = try doc.getElementById("plnMain_rpTranscriptGroup_tblCumGPAInfo")
                             
@@ -1089,7 +1112,7 @@ open class HACSession : ObservableObject {
                                 if transcript.hasClass("sg-transcript-group") {
                                     let td_with_class = try transcript.getElementsByClass("sg-transcript-group")
                                     let s1: Data? = try td_with_class.html().data(using: .utf8)
-                                    let parser_step1: Document = try SwiftSoup.parse(String(data: s1!, encoding: .utf8)!)
+                                    let parser_step1 = try SwiftSoup.parse(String(data: s1!, encoding: .utf8)!)
                                     
                                     let innerTables = try parser_step1.getElementsByTag("table")
                                     
@@ -1097,7 +1120,7 @@ open class HACSession : ObservableObject {
                                     let coursesTable = innerTables[1]
                                     
                                     let s2: Data? = try headerTable.html().data(using: .utf8)
-                                    let parser_step2: Document = try SwiftSoup.parse(String(data: s2!, encoding: .utf8)!)
+                                    let parser_step2 = try SwiftSoup.parse(String(data: s2!, encoding: .utf8)!)
                                     
                                     let totalCredits = try parser_step1.getElementById("plnMain_rpTranscriptGroup_LblTCreditValue_\(relativeIndex)")?.text()
                                     
@@ -1110,7 +1133,7 @@ open class HACSession : ObservableObject {
                                     print(building ?? "null")
                                     
                                     let s3: Data? = "<html><body>\(coursesTable)</body></html>".data(using: .utf8)
-                                    let parser_step3: Document = try SwiftSoup.parse(String(data: s3!, encoding: .utf8)!)
+                                    let parser_step3 = try SwiftSoup.parse(String(data: s3!, encoding: .utf8)!)
                                     let courseRows = try parser_step3.getElementsByClass("sg-asp-table-data-row")
                                     
                                     var tempClassHolder: [TranscriptClass] = []
@@ -1217,7 +1240,7 @@ open class HACSession : ObservableObject {
                             
                             var scheduleHolder: [Schedule] = []
                             
-                            let doc: Document = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                            let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
                             
                             let scheduleContainer = try doc.getElementById("plnMain_dgSchedule")
                             
@@ -1331,7 +1354,140 @@ open class HACSession : ObservableObject {
         }
     }
     
-    public func logout() {        
+    //MARK: IPR
+    ///Gets current IPR
+    
+    private var iprViewState = ""
+    private var iprViewValidation = ""
+    
+    public func getStudentIPR(requestDate: String = "") async -> (HACSessionStatus, [IPR]) {
+        if self.sessionAvailability == .passed {
+            if ipr.isEmpty != true {
+                return (.passed, ipr)
+            }
+        }
+        let result: (HACSessionStatus, [IPR]) = await withCheckedContinuation { continuation in
+            let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/InterimProgress.aspx")!
+            var request = URLRequest(url: url)
+            
+            request.timeoutInterval = timeoutInterval
+            
+            if requestDate != "" && (iprViewState != "" && iprViewValidation != ""){
+                
+                request.httpMethod = "POST"
+                
+                request.setValue("\(self.url)", forHTTPHeaderField: "Host")
+                request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36", forHTTPHeaderField: "User-Agent")
+                
+                request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
+                request.setValue("https://\(self.url)", forHTTPHeaderField: "Origin")
+                request.setValue("https://\(self.url)/HomeAccess/Content/Student/InterimProgress.aspx", forHTTPHeaderField: "Referer")
+                
+                let finalData: [String: String] = [
+                    "__EVENTTARGET": "",
+                    "__EVENTARGUMENT": "",
+                    "__LASTFOCUS": "",
+                    "__VIEWSTATE": iprViewState,
+                    "__VIEWSTATEGENERATOR": "19DE7394",
+                    "__EVENTVALIDATION": iprViewValidation,
+                    "ctl00$plnMain$hdnTitle": "Interim Progress Report For",
+                    "ctl00$plnMain$ddlIPRDates": requestDate,
+                    "ctl00$plnMain$hdnMessage": "Interim Progress information could not be found for this date.",
+                    "ctl00$plnMain$hdnMessage1": "This student does not have any Interim Progress Reports for this school year.",
+                    "ctl00$plnMain$hdnTitleNoRecord": "Interim Progress Report"
+                ]
+                
+                request.httpBody = finalData.percentEncoded()
+            }
+            
+            let task = URLSession.shared.dataTask(with: request) {(data, res, err) in
+                guard let data = data else {
+                    continuation.resume(returning: (.failed, []))
+                    return
+                }
+                Task {
+                    do {
+                        let doc = try SwiftSoup.parse(String(data: data, encoding: .utf8)!)
+                        
+                        self.iprViewState = try doc.getElementById("__VIEWSTATE")?.attr("value") ?? ""
+                        self.iprViewValidation = try doc.getElementById("__EVENTVALIDATION")?.attr("value") ?? ""
+                        
+                        let title = try doc.getElementById("plnMain_lblTitle")?.text() ?? "Error"
+                        
+                        let availableDates = try doc.getElementById("plnMain_ddlIPRDates")?.getElementsByTag("option").array()
+                        
+                        var dates: [String] = []
+                        
+                        for date in availableDates ?? [] {
+                            dates.append(try date.attr("value"))
+                        }
+                        
+                        let comment = try doc.getElementById("plnMain_lblNoComments")?.text() ?? "N/A"
+                        
+                        let iprContainer = try doc.getElementById("plnMain_dgIPR")
+                        
+                        //print("asdfghjkl \(try iprContainer?.getElementsByClass("sg-asp-table-header-row"))")
+                        
+                        let pre_columns = try iprContainer?.getElementsByClass("sg-asp-table-header-row")
+                        
+                        var columns: [String] = []
+                        for i in 0..<(pre_columns?.count ?? 0) {
+                            let p = try pre_columns?[i].getElementsByTag("td").array()
+                            for j in 0..<(p?.count ?? 0) {
+                                columns.append(try p?[j].text() ?? "?")
+                            }
+                            //columns.append(try pre_columns?[i].text() ?? "?")
+                        }
+                        
+                        let pre_rows = try iprContainer?.getElementsByClass("sg-asp-table-data-row")
+                        var rows: [[String]] = []
+                        for i in 0..<(pre_rows?.count ?? 0) {
+                            let pre_detail_rows = try pre_rows?[i].getElementsByTag("td").array()
+                            //print("pre_detail_rows: \(pre_detail_rows)")
+                            var detail_rows: [String] = []
+                            
+                            for j in 0..<(pre_detail_rows?.count ?? 0) {
+                                let d = try pre_detail_rows?[j].getElementsByTag("td").array()
+                                for k in 0..<(d?.count ?? 0) {
+                                    detail_rows.append(try d?[k].text() ?? "?")
+                                }
+                            }
+                            rows.append(detail_rows)
+                        }
+                        
+                        //print("columns \(columns)")
+                        //print("rows \(rows)")
+                        
+                        let finalIPR = [
+                            IPR(
+                                title: title,
+                                columns: columns,
+                                rows: rows,
+                                iprDates: dates,
+                                comment: comment
+                            )
+                        ]
+                        
+                        continuation.resume(returning: (.passed, finalIPR))
+                        return
+                        
+                    } catch {
+                        print("Something went wrong in getIPR")
+                        continuation.resume(returning: (.failed, []))
+                        return
+                    }
+                }
+            }
+            
+            task.resume()
+        }
+        
+        return (.failed, [])
+    }
+    
+    //MARK: LOGOUT
+    ///Logs current user out of HAC
+    public func logout() {
         var request = URLRequest(url: URL(string: "https://\(self.url)/HomeAccess/Account/Logoff")!)
         request.timeoutInterval = self.timeoutInterval
         
