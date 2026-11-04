@@ -385,7 +385,7 @@ open class HACSession : ObservableObject {
         if HACDemoAccount.matches(username: username, password: password) {
             guard self.sessionAvailability == .passed else { return nil }
             await demoDelay()
-            return HACMockData.student()
+            return HACMockData.student
         }
         
         if self.sessionAvailability == .passed {
@@ -585,7 +585,7 @@ open class HACSession : ObservableObject {
     public func availableMarkingPeriodsWithCurrentMarkingPeriod(districtWeightIdentifier: String) async -> (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) {
         if HACDemoAccount.matches(username: username, password: password) {
             guard self.sessionAvailability == .passed,
-                  let current = HACMockData.markingPeriod(HACMockData.currentMarkingPeriod) else {
+                  let current = HACMockData.markingPeriods[HACMockData.currentMarkingPeriod] else {
                 return (.failed, "", [], [:], nil)
             }
             await demoDelay()
@@ -889,7 +889,7 @@ open class HACSession : ObservableObject {
     public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus) {
         if HACDemoAccount.matches(username: username, password: password) {
             guard self.sessionAvailability == .passed,
-                  let period = HACMockData.markingPeriod(forPeriod) else {
+                  let period = HACMockData.markingPeriods[forPeriod] else {
                 return .failed
             }
             await demoDelay()
@@ -1124,12 +1124,11 @@ open class HACSession : ObservableObject {
             guard self.sessionAvailability == .passed else { return (.failed, [], []) }
             if !transcript.isEmpty { return (.passed, transcript, transcriptGPA) }
             await demoDelay()
-            let mock = HACMockData.transcript()
             demoApply {
-                transcript = mock.0
-                transcriptGPA = mock.1
+                transcript = HACMockData.transcript
+                transcriptGPA = HACMockData.transcriptGPA
             }
-            return (.passed, mock.0, mock.1)
+            return (.passed, HACMockData.transcript, HACMockData.transcriptGPA)
         }
         
         if self.sessionAvailability == .passed {
@@ -1291,7 +1290,7 @@ open class HACSession : ObservableObject {
             guard self.sessionAvailability == .passed else { return (.failed, [], [], []) }
             if !schedule.isEmpty { return (.passed, schedule, scheduleUnique1, scheduleUnique2) }
             await demoDelay()
-            let mock = HACMockData.schedule()
+            let mock = HACMockData.schedule
             var unique1: [String] = []
             var unique2: [String] = []
             for s in mock {
