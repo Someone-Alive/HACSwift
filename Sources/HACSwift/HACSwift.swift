@@ -191,6 +191,8 @@ open class HACSession : ObservableObject {
     
     private let timeoutInterval: Double
     
+    public let isDemo: Bool
+    
     //MARK: Initializers
     ///Username: takes in a string representation of the username
     ///Password: takes in a string represenation of the password
@@ -206,6 +208,26 @@ open class HACSession : ObservableObject {
         self.districtName = districtName
         self.hacName = hacName
         self.timeoutInterval = timeoutInterval
+        self.isDemo = HACDemoAccount.matches(username: username, password: password)
+    }
+    
+    /// Creates a session for the built-in demo account. No URL or district is needed.
+    public static func demo(useAnimation: Bool = true) -> HACSession {
+        HACSession(username: HACDemoAccount.username, password: HACDemoAccount.password, url: "demo.invalid", useAnimation: useAnimation, districtName: "", hacName: "", timeoutInterval: 10)
+    }
+    
+    //MARK: Demo helpers
+    private func demoDelay() async {
+        try? await Task.sleep(nanoseconds: UInt64(HACDemoAccount.simulatedDelay * 1_000_000_000))
+    }
+    
+    private func demoApply(_ changes: () -> Void) {
+        if useAnimation {
+            withAnimation(Animation.bouncy(duration: 0.3)) { changes() }
+        }
+        else {
+            changes()
+        }
     }
     
     
@@ -278,6 +300,13 @@ open class HACSession : ObservableObject {
     ///Returns (HACSessionStatus)
     ///(HACSessionStatus) If successfully logged in, returns passed if not, returns failed
     public func login() async -> HACSessionStatus {
+        if isDemo {
+            await demoDelay()
+            self.sessionAvailability = .passed
+            self.status = .loggedIn
+            return .passed
+        }
+        
         let hacName = self.hacName
         
         var request = URLRequest(url: URL(string: "https://\(self.url)/HomeAccess/Account/LogOn")!)
@@ -356,6 +385,12 @@ open class HACSession : ObservableObject {
     //MARK: USER INFO
     ///Gets the information about a user provided through HAC
     public func getUserInfo() async -> HACStudent? {
+        if isDemo {
+            guard self.sessionAvailability == .passed else { return nil }
+            await demoDelay()
+            return HACMockData.student()
+        }
+        
         if self.sessionAvailability == .passed {
             let result: HACStudent = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Registration.aspx")!
@@ -426,6 +461,12 @@ open class HACSession : ObservableObject {
     //Returns empty array if login failed
     //Returns (status, current marking period, all marking periods)
     public func availableMarkingPeriods() async -> (HACSessionStatus, String, [String], [String: String]) {
+        if isDemo {
+            guard self.sessionAvailability == .passed else { return (.failed, "", [], [:]) }
+            await demoDelay()
+            return (.passed, HACMockData.currentMarkingPeriod, HACMockData.markingPeriodValues, ["demo": "true"])
+        }
+        
         if self.sessionAvailability == .passed {
             return await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
@@ -545,6 +586,16 @@ open class HACSession : ObservableObject {
     }
     
     public func availableMarkingPeriodsWithCurrentMarkingPeriod(districtWeightIdentifier: String) async -> (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) {
+        if isDemo {
+            guard self.sessionAvailability == .passed,
+                  let current = HACMockData.markingPeriod(HACMockData.currentMarkingPeriod) else {
+                return (.failed, "", [], [:], nil)
+            }
+            await demoDelay()
+            demoApply { markingPeriods.append(current) }
+            return (.passed, HACMockData.currentMarkingPeriod, HACMockData.markingPeriodValues, ["demo": "true"], current)
+        }
+        
         if self.sessionAvailability == .passed {
             let result: (HACSessionStatus, String, [String], [String: String], MarkingPeriod?) = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
@@ -839,6 +890,16 @@ open class HACSession : ObservableObject {
     //Requires a value from availableMarkingPeriods()
     //Returns (status)
     public func requestGrades(districtWeightIdentifier: String, forPeriod: String, dictionary: [String: String]) async -> (HACSessionStatus) {
+        if isDemo {
+            guard self.sessionAvailability == .passed,
+                  let period = HACMockData.markingPeriod(forPeriod) else {
+                return .failed
+            }
+            await demoDelay()
+            demoApply { markingPeriods.append(period) }
+            return .passed
+        }
+        
         if self.sessionAvailability == .passed {
             let result: (HACSessionStatus, MarkingPeriod) = await withCheckedContinuation { continuation in
                 let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/Assignments.aspx")!
@@ -1063,6 +1124,18 @@ open class HACSession : ObservableObject {
     
     public func getStudentTranscript() async -> (HACSessionStatus, [Transcript], [TranscriptGPA]) {
         if self.sessionAvailability == .passed {
+            if isDemo {
+                guard self.sessionAvailability == .passed else { return (.failed, [], []) }
+                if !transcript.isEmpty { return (.passed, transcript, transcriptGPA) }
+                await demoDelay()
+                let mock = HACMockData.transcript()
+                demoApply {
+                    transcript = mock.0
+                    transcriptGPA = mock.1
+                }
+                return (.passed, mock.0, mock.1)
+            }
+            
             if transcript.isEmpty != true {
                 return (.passed, transcript, transcriptGPA)
             }
@@ -1218,6 +1291,25 @@ open class HACSession : ObservableObject {
     
     public func getStudentSchedule() async -> (HACSessionStatus, [Schedule], [String], [String]) {
         if self.sessionAvailability == .passed {
+            if isDemo {
+                guard self.sessionAvailability == .passed else { return (.failed, [], [], []) }
+                if !schedule.isEmpty { return (.passed, schedule, scheduleUnique1, scheduleUnique2) }
+                await demoDelay()
+                let mock = HACMockData.schedule()
+                var unique1: [String] = []
+                var unique2: [String] = []
+                for s in mock {
+                    if !unique1.contains(s.markingPeriods) { unique1.append(s.markingPeriods) }
+                    if !unique2.contains(s.days) { unique2.append(s.days) }
+                }
+                demoApply {
+                    schedule = mock
+                    scheduleUnique1 = unique1
+                    scheduleUnique2 = unique2
+                }
+                return (.passed, mock, unique1, unique2)
+            }
+            
             if schedule.isEmpty != true {
                 return (.passed, schedule, scheduleUnique1, scheduleUnique2)
             }
@@ -1362,6 +1454,15 @@ open class HACSession : ObservableObject {
     
     public func getStudentIPR(requestDate: String = "") async -> (HACSessionStatus, [IPR]) {
         if self.sessionAvailability == .passed {
+            if isDemo {
+                guard self.sessionAvailability == .passed else { return (.failed, []) }
+                if requestDate.isEmpty && !ipr.isEmpty { return (.passed, ipr) }
+                await demoDelay()
+                let mock = HACMockData.ipr(requestDate: requestDate)
+                demoApply { ipr = mock }
+                return (.passed, mock)
+            }
+            
             if ipr.isEmpty != true {
                 return (.passed, ipr)
             }
@@ -1488,6 +1589,13 @@ open class HACSession : ObservableObject {
     //MARK: LOGOUT
     ///Logs current user out of HAC
     public func logout() {
+        if isDemo {
+            self.sessionAvailability = .failed
+            self.status = .loggedOut
+            print("HAC demo user has been logged out")
+            return
+        }
+        
         var request = URLRequest(url: URL(string: "https://\(self.url)/HomeAccess/Account/Logoff")!)
         request.timeoutInterval = self.timeoutInterval
         
