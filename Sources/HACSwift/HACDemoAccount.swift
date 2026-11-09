@@ -11,9 +11,9 @@ import Foundation
  
 public enum HACDemoAccount {
     /// Username for the demo account (matched case-insensitively, whitespace trimmed).
-    public static let username = "HACdemo"
+    public static let username = "hacdemo"
     /// Password for the demo account (matched exactly).
-    public static let password = "HACdemo123"
+    public static let password = "hacdemo123"
  
     /// Artificial delay so loading states in the UI still look natural (seconds).
     public static let simulatedDelay: Double = 0.4

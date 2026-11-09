@@ -7,5 +7,5 @@
 
 public class HACSwiftInformation {
     //General Information
-    public let version = "0.0.29"
+    public let version = "1.0.0"
 }

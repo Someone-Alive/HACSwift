@@ -165,5 +165,5 @@ The mock data covers a student profile, four marking periods (`1-2027` through `
 ## Version
 
 ```swift
-HACSwiftInformation().version   // "1.0.0"
+HACSwiftInformation().version   // "0.0.29"
 ```

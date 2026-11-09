@@ -162,22 +162,38 @@ open class HACSession : ObservableObject {
     }
     
     //MARK: IPR related structs
-    public struct IPR: Identifiable {
-        public let id = UUID()
-        var title: String
-        var columns: [String]
-        var rows: [[String]]
-        var iprDates: [String]
-        var comment: String
+    public struct IPR: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
+        public var title: String
+        public var columns: [String]
+        public var rows: [[String]]
+        public var iprDates: [String]
+        public var comment: String
+        
+        public init(title: String, columns: [String], rows: [[String]], iprDates: [String], comment: String) {
+            self.title = title
+            self.columns = columns
+            self.rows = rows
+            self.iprDates = iprDates
+            self.comment = comment
+        }
     }
 
-    public struct ReportCard: Identifiable {
-        public let id = UUID()
-        var title: String
-        var columns: [String]
-        var rows: [[String]]
-        var totalEarnedCredit: String
-        var comment: String
+    public struct ReportCard: Identifiable, Hashable, Codable, Sendable {
+        public var id = UUID()
+        public var title: String
+        public var columns: [String]
+        public var rows: [[String]]
+        public var totalEarnedCredit: String
+        public var comment: String
+        
+        public init(title: String, columns: [String], rows: [[String]], totalEarnedCredit: String, comment: String) {
+            self.title = title
+            self.columns = columns
+            self.rows = rows
+            self.totalEarnedCredit = totalEarnedCredit
+            self.comment = comment
+        }
     }
     
     //MARK: Variables
@@ -186,7 +202,7 @@ open class HACSession : ObservableObject {
     private let url: String
     private let useAnimation: Bool
     
-    private let districtName: String
+    public let districtName: String
     private let hacName: String
     
     private let timeoutInterval: Double
@@ -1459,11 +1475,15 @@ open class HACSession : ObservableObject {
             return (.passed, mock)
         }
         
-        if self.sessionAvailability == .passed {
-            if ipr.isEmpty != true {
-                return (.passed, ipr)
-            }
+        guard self.sessionAvailability == .passed else {
+            print("Login was not passed, therefore will not run getStudentIPR()")
+            return (.failed, [])
         }
+
+        if requestDate.isEmpty && !ipr.isEmpty {
+            return (.passed, ipr)
+        }
+        
         let result: (HACSessionStatus, [IPR]) = await withCheckedContinuation { continuation in
             let url = URL(string: "https://\(self.url)/HomeAccess/Content/Student/InterimProgress.aspx")!
             var request = URLRequest(url: url)
@@ -1580,7 +1600,20 @@ open class HACSession : ObservableObject {
             task.resume()
         }
         
-        return (.failed, [])
+        if result.0 == .passed {
+            if useAnimation {
+                withAnimation(Animation.bouncy(duration: 0.3)) {
+                    ipr = result.1
+                }
+            }
+            else {
+                ipr = result.1
+            }
+            return (result.0, result.1)
+        }
+        else {
+            return (.failed, [])
+        }
     }
     
     //MARK: LOGOUT
