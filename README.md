@@ -4,7 +4,7 @@ A Swift package for interacting with Home Access Center (HAC). It signs in to a 
 
 > This package is not affiliated with PowerSchool in any way.
 
-**Status:** under active development (current version `0.0.29`). APIs may change between releases.
+**Status:** Stable (current version `1.0.0`). APIs may change between releases.
 
 ## Requirements
 
@@ -165,5 +165,5 @@ The mock data covers a student profile, four marking periods (`1-2027` through `
 ## Version
 
 ```swift
-HACSwiftInformation().version   // "0.0.29"
+HACSwiftInformation().version   // "1.0.0"
 ```
